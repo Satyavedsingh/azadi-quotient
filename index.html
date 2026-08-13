@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azadi Quotient</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; color: #333; line-height: 1.6; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; text-align: center; }
+        .question-block { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .question-text { font-weight: bold; margin-bottom: 10px; }
+        label { margin-right: 15px; cursor: pointer; }
+        button { display: block; width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 20px; }
+        button:hover { background: #2980b9; }
+        .hidden { display: none; }
+        .result-box { background: #e8f6f3; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center; }
+        .disclaimer { font-size: 0.85em; color: #7f8c8d; margin-top: 20px; font-style: italic; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Azadi Quotient Assessment</h1>
+    
+    <!-- SECTION 1: The 10 Questions -->
+    <div id="quiz-section">
+        <p style="text-align:center; color:#555;">जवाब केवल हाँ / नहीं में दें।</p>
+        <form id="quiz-form"></form>
+        <button onclick="calculateScore()">Submit & Get Score</button>
+    </div>
+
+    <!-- SECTION 2: The Tie-Breaker -->
+    <div id="tiebreaker-section" class="hidden">
+        <h2>Tie-Breaker</h2>
+        <p class="question-text">इनमें से कौन-सी चीज़ आपको अपने जीवन में सबसे ज़्यादा बाँधती दिखाई देती है?</p>
+        <div id="tiebreaker-options"></div>
+        <button onclick="showFinalResultFromTie()">See Recommended Books</button>
+    </div>
+
+    <!-- SECTION 3: Final Result -->
+    <div id="result-section" class="hidden">
+        <h2 id="score-display"></h2>
+        <div class="result-box">
+            <h3 id="bondage-display"></h3>
+            <p><strong>सुझाए गए साहित्य:</strong> <span id="books-display"></span></p>
+        </div>
+        <p class="disclaimer">ध्यान दें: यह कोई वैज्ञानिक assessment नहीं है। 100 score का अर्थ यह नहीं कि व्यक्ति पूरी तरह आज़ाद है। यह activity केवल कुछ संभावित बेड़ियों को पहचानने का माध्यम है।</p>
+        <button onclick="location.reload()" style="background:#95a5a6;">Restart Activity</button>
+    </div>
+</div>
+
+<script>
+    // The Data Structure mapping Questions to Bondages and Books
+    const data = [
+        { q: "क्या सिर्फ़ इसलिए कोई कपड़ा, फोन या चीज़ लेने का मन होता है क्योंकि किसी और के पास वह है?", bondage: "प्रभावित चाहत / इच्छाएँ", books: "मन, वेदान्त" },
+        { q: "क्या किसी की तारीफ़ से आपका mood अच्छा और आलोचना से खराब हो जाता है?", bondage: "लोकमत / Approval", books: "भावनाएँ, आज़ादी 2.0, मन" },
+        { q: "क्या 'लोग क्या कहेंगे' सोचकर आप वह काम छोड़ देते हैं जो आपको सही लगता है?", bondage: "लोकमत / डर", books: "आज़ादी 2.0, जानदार व्यक्तित्व" },
+        { q: "क्या दूसरों की सफलता देखकर अपनी ज़िंदगी कमतर लगने लगती है?", bondage: "तुलना", books: "Decoding Success, सफलता, जानदार व्यक्तित्व" },
+        { q: "क्या कोई ऐसी आदत है जिसे अपने लिए गलत जानते हुए भी आप छोड़ नहीं पा रहे?", bondage: "आदत / इच्छा", books: "मन, सही कर्म" },
+        { q: "क्या आप किसी बात को सिर्फ़ इसलिए सही मान लेते हैं क्योंकि परिवार, परंपरा या समाज उसे मानता है?", bondage: "मान्यताएँ / Conditioning", books: "अंधविश्वास, वेदान्त, Stupidity" },
+        { q: "क्या किसी व्यक्ति का attention या व्यवहार आपका mood बहुत ज़्यादा बदल देता है?", bondage: "आसक्ति", books: "प्रेम सीखना पड़ता है, मन, भावनाएँ" },
+        { q: "क्या सही काम पता होने पर भी आप अक्सर आसान या आराम वाला रास्ता चुन लेते हैं?", bondage: "सुविधा / आलस", books: "संघर्ष, ज्वाला, उत्कृष्टता" },
+        { q: "क्या असफलता का डर आपको किसी ज़रूरी कोशिश को शुरू करने या पूरा करने से रोक देता है?", bondage: "असफलता का डर", books: "डर, संघर्ष, Decoding Success" },
+        { q: "क्या किसी व्यक्ति, चीज़ या आदत के बारे में आपको लगता है- 'इसके बिना मैं नहीं रह सकता'?", bondage: "निर्भरता", books: "मन, आज़ादी 2.0, वेदान्त" }
+    ];
+
+    // Generate the 10 questions dynamically in HTML
+    const form = document.getElementById('quiz-form');
+    data.forEach((item, index) => {
+        form.innerHTML += `
+            <div class="question-block">
+                <div class="question-text">${index + 1}. ${item.q}</div>
+                <label><input type="radio" name="q${index}" value="yes"> हाँ</label>
+                <label><input type="radio" name="q${index}" value="no" checked> नहीं</label>
+            </div>
+        `;
+    });
+
+    let selectedYesIndices = [];
+    let azadiScore = 100;
+
+    // Logic to calculate the score
+    function calculateScore() {
+        selectedYesIndices = [];
+        let yesCount = 0;
+
+        for (let i = 0; i < 10; i++) {
+            const answer = document.querySelector(`input[name="q${i}"]:checked`).value;
+            if (answer === 'yes') {
+                yesCount++;
+                selectedYesIndices.push(i);
+            }
+        }
+
+        azadiScore = 100 - (yesCount * 10);
+        document.getElementById('quiz-section').classList.add('hidden');
+        document.getElementById('score-display').innerText = `आपका Azadi Quotient: ${azadiScore} / 100`;
+
+        // Routing Logic
+        if (yesCount === 0) {
+            showFinalResult("कोई प्रमुख बेड़ी नहीं", "आप एक संतुलित मार्ग पर हैं। स्व-अध्ययन जारी रखें।");
+        } else if (yesCount === 1) {
+            const resultData = data[selectedYesIndices[0]];
+            showFinalResult(resultData.bondage, resultData.books);
+        } else {
+            setupTieBreaker();
+        }
+    }
+
+    // Logic for multiple "Yes" answers
+    function setupTieBreaker() {
+        document.getElementById('tiebreaker-section').classList.remove('hidden');
+        const optionsDiv = document.getElementById('tiebreaker-options');
+        optionsDiv.innerHTML = ''; // Clear previous
+
+        selectedYesIndices.forEach((index, i) => {
+            optionsDiv.innerHTML += `
+                <div style="margin-bottom:10px;">
+                    <label>
+                        <input type="radio" name="tiebreaker" value="${index}" ${i === 0 ? 'checked' : ''}> 
+                        ${data[index].bondage}
+                    </label>
+                </div>
+            `;
+        });
+    }
+
+    function showFinalResultFromTie() {
+        const selectedIndex = document.querySelector('input[name="tiebreaker"]:checked').value;
+        const resultData = data[selectedIndex];
+        document.getElementById('tiebreaker-section').classList.add('hidden');
+        showFinalResult(resultData.bondage, resultData.books);
+    }
+
+    function showFinalResult(bondage, books) {
+        document.getElementById('result-section').classList.remove('hidden');
+        document.getElementById('bondage-display').innerText = `प्रमुख रुकावट: ${bondage}`;
+        document.getElementById('books-display').innerText = books;
+    }
+</script>
+</body>
+</html>

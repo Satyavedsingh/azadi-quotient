@@ -13,15 +13,25 @@
         label { margin-right: 15px; cursor: pointer; }
         button { display: block; width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 20px; }
         button:hover { background: #2980b9; }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         .result-box { background: #e8f6f3; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center; }
         
-        /* STYLES FOR THE 15 BOOK IMAGES */
+        /* STYLES FOR THE BOOK IMAGES */
         .book-gallery { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 20px; }
-        .book-item { text-align: center; width: 120px; }
+        .book-item { text-align: center; width: 120px; cursor: pointer; transition: transform 0.2s; }
+        .book-item:hover { transform: scale(1.05); } /* Makes the book grow slightly when hovered */
         .book-item img { width: 100%; height: 180px; object-fit: cover; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); border: 1px solid #ddd; }
         .book-item p { margin-top: 8px; font-weight: bold; font-size: 14px; color: #2c3e50; line-height: 1.2; }
         
+        /* NEW STYLES FOR THE POPUP MODAL */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; max-width: 400px; width: 90%; text-align: center; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 28px; cursor: pointer; color: #7f8c8d; border: none; background: none; }
+        .modal-img { width: 140px; height: 210px; object-fit: cover; border-radius: 6px; margin-bottom: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .modal-desc { font-size: 15px; color: #555; margin-bottom: 20px; text-align: left; }
+        .buy-btn { background: #e67e22; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; width: 80%; }
+        .buy-btn:hover { background: #d35400; }
+
         .disclaimer { font-size: 0.85em; color: #7f8c8d; margin-top: 30px; font-style: italic; text-align: center; }
     </style>
 </head>
@@ -47,7 +57,7 @@
         <h2 id="score-display"></h2>
         <div class="result-box">
             <h3 id="bondage-display"></h3>
-            <p><strong>सुझाए गए साहित्य:</strong></p>
+            <p><strong>सुझाए गए साहित्य:</strong> (विवरण पढ़ने के लिए किताब पर क्लिक करें)</p>
             <div id="books-display" class="book-gallery"></div> 
         </div>
         <p class="disclaimer">ध्यान दें: यह कोई वैज्ञानिक assessment नहीं है। 100 score का अर्थ यह नहीं कि व्यक्ति पूरी तरह आज़ाद है। यह activity केवल कुछ संभावित बेड़ियों को पहचानने का माध्यम है।</p>
@@ -55,59 +65,110 @@
     </div>
 </div>
 
+<!-- THE POPUP WINDOW (MODAL) -->
+<div id="book-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+        <img id="modal-img" class="modal-img" src="" alt="Book Cover">
+        <h3 id="modal-title"></h3>
+        <p id="modal-desc" class="modal-desc"></p>
+        <a id="modal-link" href="#" target="_blank" class="buy-btn">किताब खरीदें</a>
+    </div>
+</div>
+
 <script>
-    // FULL DATA STRUCTURE WITH EXACT FILENAMES
-    const data = [
-        { 
-            q: "क्या सिर्फ़ इसलिए कोई कपड़ा, फोन या चीज़ लेने का मन होता है क्योंकि किसी और के पास वह है?", 
-            bondage: "प्रभावित चाहत / इच्छाएँ", 
-            books: [ {title: "मन", img: "Mann.jpg"}, {title: "वेदान्त", img: "Vedant.jpg"} ] 
+    // --- STEP 1: THE BOOK DATABASE ---
+    // You can edit the "desc" (description) and "link" (purchase link) for each book here.
+    const bookDatabase = {
+        "मन": { 
+            img: "Mann.jpg", 
+            desc: "यह पुस्तक मन की कार्यप्रणाली, इच्छाओं के दुष्चक्र और उससे मुक्ति के मार्गों पर प्रकाश डालती है। आचार्य प्रशांत इसमें बताते हैं कि मन की दासता में जीना कोई अनिवार्यता नहीं है और हमें इससे आज़ादी कैसे मिल सकती है।", 
+            link: "[https://acharyaprashant.org/en/books/bk-mann](https://acharyaprashant.org/en/books/bk-mann)" 
         },
-        { 
-            q: "क्या किसी की तारीफ़ से आपका mood अच्छा और आलोचना से खराब हो जाता है?", 
-            bondage: "लोकमत / Approval", 
-            books: [ {title: "भावनाएँ", img: "Bhaavnaye.jpg"}, {title: "आज़ादी 2.0", img: "Azadi_2.0.jpg"}, {title: "मन", img: "Mann.jpg"} ] 
+        "वेदान्त": { 
+            img: "Vedant.jpg", 
+            desc: "सनातन धर्म और उपनिषदों के सार को समेटे हुए, यह पुस्तक आत्म-जिज्ञासा और वेदान्त के गूढ़ रहस्यों को अत्यंत सरलता से प्रस्तुत करती है। यह आध्यात्मिक यात्रा शुरू करने वालों के लिए एक बेहतरीन भेंट है।", 
+            link: "[https://acharyaprashant.org/en/books/book-vedanta-hindi](https://acharyaprashant.org/en/books/book-vedanta-hindi)" 
         },
-        { 
-            q: "क्या 'लोग क्या कहेंगे' सोचकर आप वह काम छोड़ देते हैं जो आपको सही लगता है?", 
-            bondage: "लोकमत / डर", 
-            books: [ {title: "आज़ादी 2.0", img: "Azadi_2.0.jpg"}, {title: "जानदार व्यक्तित्व", img: "Jandar_vyaktitva.jpg"} ] 
+        "भावनाएँ": { 
+            img: "Bhaavnaye.jpg", 
+            desc: "भावनाएं क्या हैं और वे हम पर कैसे हावी होती हैं? यह किताब विचारों और भावनाओं के स्रोत को समझाकर आपको भावना-आधारित नहीं, बल्कि बोध-आधारित जीवन जीने की प्रेरणा देती है।", 
+            link: "[https://acharyaprashant.org/en/books/bk-bhaavanaein](https://acharyaprashant.org/en/books/bk-bhaavanaein)" 
         },
-        { 
-            q: "क्या दूसरों की सफलता देखकर अपनी ज़िंदगी कमतर लगने लगती है?", 
-            bondage: "तुलना", 
-            books: [ {title: "Decoding Success", img: "Decoding_success.jpg"}, {title: "सफलता", img: "Safalta.jpg"}, {title: "जानदार व्यक्तित्व", img: "Jandar_vyaktitva.jpg"} ] 
+        "आज़ादी 2.0": { 
+            img: "Azadi_2.0.jpg", 
+            desc: "यह पुस्तक हमारी सामाजिक, मानसिक और भावनात्मक ग़ुलामी के उन छिपे हुए कारणों को उजागर करती है जो आज भी जड़ें जमाए हुए हैं, और हमें वास्तविक आज़ादी की ओर ले जाती है।", 
+            link: "[https://acharyaprashant.org/en/books/azadi](https://acharyaprashant.org/en/books/azadi)" 
         },
-        { 
-            q: "क्या कोई ऐसी आदत है जिसे अपने लिए गलत जानते हुए भी आप छोड़ नहीं पा रहे?", 
-            bondage: "आदत / इच्छा", 
-            books: [ {title: "मन", img: "Mann.jpg"}, {title: "सही कर्म", img: "Sahi_karm.jpg"} ] 
+        "जानदार व्यक्तित्व": { 
+            img: "Jandar_vyaktitva.jpg", 
+            desc: "सच्चा व्यक्तित्व बाहरी दिखावे से नहीं, बल्कि भीतर की निष्कामता और करुणा से बनता है। यह पुस्तक उन ऊँचे व्यक्तित्वों के दर्शन को समझाती है जिन्होंने समष्टि के कल्याण के लिए कार्य किया।", 
+            link: "[https://acharyaprashant.org/en/books/bk-jaanadaar-vyaktitwa](https://acharyaprashant.org/en/books/bk-jaanadaar-vyaktitwa)" 
         },
-        { 
-            q: "क्या आप किसी बात को सिर्फ़ इसलिए सही मान लेते हैं क्योंकि परिवार, परंपरा या समाज उसे मानता है?", 
-            bondage: "मान्यताएँ / Conditioning", 
-            books: [ {title: "अंधविश्वास", img: "andhvishwas.jpg"}, {title: "वेदान्त", img: "Vedant.jpg"}, {title: "Stupidity", img: "Stupidityt.jpg"} ] 
+        "Decoding Success": { 
+            img: "Decoding_success.jpg", 
+            desc: "Acharya Prashant challenges the conventional definitions of worldly success and achievement, guiding readers to realize that the true battle for success lies within oneself.", 
+            link: "[https://acharyaprashant.org/en/books/bk-decoding-success](https://acharyaprashant.org/en/books/bk-decoding-success)" 
         },
-        { 
-            q: "क्या किसी व्यक्ति का attention या व्यवहार आपका mood बहुत ज़्यादा बदल देता है?", 
-            bondage: "आसक्ति", 
-            books: [ {title: "प्रेम सीखना पड़ता है", img: "prem.jpg"}, {title: "मन", img: "Mann.jpg"}, {title: "भावनाएँ", img: "Bhaavnaye.jpg"} ] 
+        "सफलता": { 
+            img: "Safalta.jpg", 
+            desc: "सच्ची सफलता बाहरी उपलब्धियों में नहीं, बल्कि इस विचार से मुक्त होने में है कि आप 'असफल' हैं। यह पुस्तक मौज में जीने और सच्चे जीवन के सूत्र सिखाती है।", 
+            link: "[https://acharyaprashant.org/en/books/book-safalta](https://acharyaprashant.org/en/books/book-safalta)" 
         },
-        { 
-            q: "क्या सही काम पता होने पर भी आप अक्सर आसान या आराम वाला रास्ता चुन लेते हैं?", 
-            bondage: "सुविधा / आलस", 
-            books: [ {title: "संघर्ष", img: "sangharsh.jpg"}, {title: "ज्वाला", img: "jwala.jpg"}, {title: "उत्कृष्टता", img: "Utkrishtta.jpg"} ] 
+        "सही कर्म": { 
+            img: "Sahi_karm.jpg", 
+            desc: "हमारे लिए सही काम क्या है? यह पुस्तक गहराई से समझाती है कि सही काम एकमात्र वही है जो हमारे बंधनों को काटे और हमें हमारी मूलग्रंथि से मुक्त करे।", 
+            link: "[https://acharyaprashant.org/en/books/bk-sahi-karm](https://acharyaprashant.org/en/books/bk-sahi-karm)" 
         },
-        { 
-            q: "क्या असफलता का डर आपको किसी ज़रूरी कोशिश को शुरू करने या पूरा करने से रोक देता है?", 
-            bondage: "असफलता का डर", 
-            books: [ {title: "डर", img: "Dar.jpg"}, {title: "संघर्ष", img: "sangharsh.jpg"}, {title: "Decoding Success", img: "Decoding_success.jpg"} ] 
+        "अंधविश्वास": { 
+            img: "andhvishwas.jpg", 
+            desc: "यह किताब जादू-टोने, तंत्र-मंत्र और अन्य झूठी मान्यताओं का खंडन करते हुए आपको एक आत्मज्ञान संचालित, वैज्ञानिक और आध्यात्मिक दृष्टिकोण अपनाने के लिए प्रेरित करती है।", 
+            link: "[https://acharyaprashant.org/en/books/bk-andhvishwas](https://acharyaprashant.org/en/books/bk-andhvishwas)" 
         },
-        { 
-            q: "क्या किसी व्यक्ति, चीज़ या आदत के बारे में आपको लगता है- 'इसके बिना मैं नहीं रह सकता'?", 
-            bondage: "निर्भरता", 
-            books: [ {title: "मन", img: "Mann.jpg"}, {title: "आज़ादी 2.0", img: "Azadi_2.0.jpg"}, {title: "वेदान्त", img: "Vedant.jpg"} ] 
+        "Stupidity": { 
+            img: "Stupidityt.jpg", 
+            desc: "This book challenges blind traditions, rituals, and trendy spiritual myths, encouraging readers to break free from dogmas and seek real, unfiltered self-knowledge.", 
+            link: "[https://acharyaprashant.org/en/books/stupidity](https://acharyaprashant.org/en/books/stupidity)" 
+        },
+        "प्रेम सीखना पड़ता है": { 
+            img: "prem.jpg", 
+            desc: "हम जिसे प्राकृतिक प्रेम समझते हैं, वह असल में प्रेम नहीं है। असली प्रेम नैसर्गिक नहीं, बल्कि सीखना पड़ता है। यह पुस्तक मन के आकर्षण और सच्चे प्रेम के बीच का अंतर स्पष्ट करती है।", 
+            link: "[https://acharyaprashant.org/en/books/book-prem-seekhna-padta-hai](https://acharyaprashant.org/en/books/book-prem-seekhna-padta-hai)" 
+        },
+        "संघर्ष": { 
+            img: "sangharsh.jpg", 
+            desc: "बाहरी दुनिया से लड़ने के बजाय, असली संघर्ष अपने मन के विकारों के विरुद्ध होना चाहिए। यह पुस्तक सही संघर्ष का मार्ग दिखाती है ताकि बाहरी चुनौतियों का डटकर सामना किया जा सके।", 
+            link: "[https://acharyaprashant.org/en/books/bk-sangharsh-hb](https://acharyaprashant.org/en/books/bk-sangharsh-hb)" 
+        },
+        "ज्वाला": { 
+            img: "jwala.jpg", 
+            desc: "यह पुस्तक उन युगपुरुषों के अथक संघर्ष की कहानी है जिन्होंने केवल बाहरी ताकतों से ही नहीं, बल्कि सामाजिक रूढ़ियों और अंधविश्वास के ख़िलाफ़ लड़कर हमें आज़ादी दिलाई।", 
+            link: "[https://acharyaprashant.org/en/books/jwala](https://acharyaprashant.org/en/books/jwala)" 
+        },
+        "उत्कृष्टता": { 
+            img: "Utkrishtta.jpg", 
+            desc: "क्षुद्रताओं से परे, पूर्णता और उत्कृष्टता की तलाश ही हमारे जीवन का लक्ष्य होना चाहिए। यह पुस्तक औसत दर्जे के जीवन को त्यागकर श्रेष्ठता तक पहुँचने का मार्ग प्रशस्त करती है।", 
+            link: "[https://acharyaprashant.org/en/books/bk-utkrishtataa](https://acharyaprashant.org/en/books/bk-utkrishtataa)" 
+        },
+        "डर": { 
+            img: "Dar.jpg", 
+            desc: "हमारा सारा जीवन अपूर्णता के विचार और डर के साये में बीतता है। यह पुस्तक हमें हमारे असली अमृतस्वरूप 'मैं' से परिचित कराकर डर से हमेशा के लिए मुक्ति दिलाती है।", 
+            link: "[https://acharyaprashant.org/en/books/book-dar-hb](https://acharyaprashant.org/en/books/book-dar-hb)" 
         }
+    };
+
+    // --- STEP 2: THE QUESTIONS AND LOGIC ---
+    const data = [
+        { q: "क्या सिर्फ़ इसलिए कोई कपड़ा, फोन या चीज़ लेने का मन होता है क्योंकि किसी और के पास वह है?", bondage: "प्रभावित चाहत / इच्छाएँ", books: ["मन", "वेदान्त"] },
+        { q: "क्या किसी की तारीफ़ से आपका mood अच्छा और आलोचना से खराब हो जाता है?", bondage: "लोकमत / Approval", books: ["भावनाएँ", "आज़ादी 2.0", "मन"] },
+        { q: "क्या 'लोग क्या कहेंगे' सोचकर आप वह काम छोड़ देते हैं जो आपको सही लगता है?", bondage: "लोकमत / डर", books: ["आज़ादी 2.0", "जानदार व्यक्तित्व"] },
+        { q: "क्या दूसरों की सफलता देखकर अपनी ज़िंदगी कमतर लगने लगती है?", bondage: "तुलना", books: ["Decoding Success", "सफलता", "जानदार व्यक्तित्व"] },
+        { q: "क्या कोई ऐसी आदत है जिसे अपने लिए गलत जानते हुए भी आप छोड़ नहीं पा रहे?", bondage: "आदत / इच्छा", books: ["मन", "सही कर्म"] },
+        { q: "क्या आप किसी बात को सिर्फ़ इसलिए सही मान लेते हैं क्योंकि परिवार, परंपरा या समाज उसे मानता है?", bondage: "मान्यताएँ / Conditioning", books: ["अंधविश्वास", "वेदान्त", "Stupidity"] },
+        { q: "क्या किसी व्यक्ति का attention या व्यवहार आपका mood बहुत ज़्यादा बदल देता है?", bondage: "आसक्ति", books: ["प्रेम सीखना पड़ता है", "मन", "भावनाएँ"] },
+        { q: "क्या सही काम पता होने पर भी आप अक्सर आसान या आराम वाला रास्ता चुन लेते हैं?", bondage: "सुविधा / आलस", books: ["संघर्ष", "ज्वाला", "उत्कृष्टता"] },
+        { q: "क्या असफलता का डर आपको किसी ज़रूरी कोशिश को शुरू करने या पूरा करने से रोक देता है?", bondage: "असफलता का डर", books: ["डर", "संघर्ष", "Decoding Success"] },
+        { q: "क्या किसी व्यक्ति, चीज़ या आदत के बारे में आपको लगता है- 'इसके बिना मैं नहीं रह सकता'?", bondage: "निर्भरता", books: ["मन", "आज़ादी 2.0", "वेदान्त"] }
     ];
 
     const form = document.getElementById('quiz-form');
@@ -183,17 +244,38 @@
         if (booksArray.length === 0) {
             galleryHTML = '<p>आप एक संतुलित मार्ग पर हैं। स्व-अध्ययन जारी रखें।</p>';
         } else {
-            booksArray.forEach(book => {
+            booksArray.forEach(bookTitle => {
+                const bookInfo = bookDatabase[bookTitle];
+                // Added the onclick event to trigger the popup
                 galleryHTML += `
-                    <div class="book-item">
-                        <img src="${book.img}" alt="${book.title}" onerror="this.src='https://via.placeholder.com/120x180?text=Cover+Missing'">
-                        <p>${book.title}</p>
+                    <div class="book-item" onclick="openModal('${bookTitle}')">
+                        <img src="${bookInfo.img}" alt="${bookTitle}" onerror="this.src='https://via.placeholder.com/120x180?text=Cover+Missing'">
+                        <p>${bookTitle}</p>
                     </div>
                 `;
             });
         }
         
         document.getElementById('books-display').innerHTML = galleryHTML;
+    }
+
+    // --- NEW POPUP CONTROL FUNCTIONS ---
+    function openModal(bookTitle) {
+        const bookInfo = bookDatabase[bookTitle];
+        
+        // Inject the correct data into the popup
+        document.getElementById('modal-title').innerText = bookTitle;
+        document.getElementById('modal-img').src = bookInfo.img;
+        document.getElementById('modal-desc').innerText = bookInfo.desc;
+        document.getElementById('modal-link').href = bookInfo.link;
+        
+        // Make the popup visible
+        document.getElementById('book-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        // Hide the popup
+        document.getElementById('book-modal').classList.add('hidden');
     }
 </script>
 </body>

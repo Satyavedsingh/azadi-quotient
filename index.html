@@ -19,16 +19,16 @@
         /* STYLES FOR THE BOOK IMAGES */
         .book-gallery { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 20px; }
         .book-item { text-align: center; width: 120px; cursor: pointer; transition: transform 0.2s; }
-        .book-item:hover { transform: scale(1.05); } /* Makes the book grow slightly when hovered */
+        .book-item:hover { transform: scale(1.05); } 
         .book-item img { width: 100%; height: 180px; object-fit: cover; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); border: 1px solid #ddd; }
         .book-item p { margin-top: 8px; font-weight: bold; font-size: 14px; color: #2c3e50; line-height: 1.2; }
         
-        /* NEW STYLES FOR THE POPUP MODAL */
+        /* POPUP MODAL STYLES */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 25px; border-radius: 10px; max-width: 400px; width: 90%; text-align: center; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; max-width: 400px; width: 90%; text-align: center; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 85vh; overflow-y: auto; }
         .close-btn { position: absolute; top: 10px; right: 15px; font-size: 28px; cursor: pointer; color: #7f8c8d; border: none; background: none; }
         .modal-img { width: 140px; height: 210px; object-fit: cover; border-radius: 6px; margin-bottom: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .modal-desc { font-size: 15px; color: #555; margin-bottom: 20px; text-align: left; }
+        .modal-desc { font-size: 14px; color: #555; margin-bottom: 20px; text-align: left; line-height: 1.5; }
         .buy-btn { background: #e67e22; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; width: 80%; }
         .buy-btn:hover { background: #d35400; }
 
@@ -77,8 +77,7 @@
 </div>
 
 <script>
-    // --- STEP 1: THE BOOK DATABASE ---
-    // You can edit the "desc" (description) and "link" (purchase link) for each book here.
+    // --- INTEGRATED BOOK DATABASE ---
     const bookDatabase = {
         "मन": { 
             img: "Mann.jpg", 
@@ -157,7 +156,7 @@
         }
     };
 
-    // --- STEP 2: THE QUESTIONS AND LOGIC ---
+    // --- THE QUESTIONS AND LOGIC ---
     const data = [
         { q: "क्या सिर्फ़ इसलिए कोई कपड़ा, फोन या चीज़ लेने का मन होता है क्योंकि किसी और के पास वह है?", bondage: "प्रभावित चाहत / इच्छाएँ", books: ["मन", "वेदान्त"] },
         { q: "क्या किसी की तारीफ़ से आपका mood अच्छा और आलोचना से खराब हो जाता है?", bondage: "लोकमत / Approval", books: ["भावनाएँ", "आज़ादी 2.0", "मन"] },
@@ -167,7 +166,7 @@
         { q: "क्या आप किसी बात को सिर्फ़ इसलिए सही मान लेते हैं क्योंकि परिवार, परंपरा या समाज उसे मानता है?", bondage: "मान्यताएँ / Conditioning", books: ["अंधविश्वास", "वेदान्त", "Stupidity"] },
         { q: "क्या किसी व्यक्ति का attention या व्यवहार आपका mood बहुत ज़्यादा बदल देता है?", bondage: "आसक्ति", books: ["प्रेम सीखना पड़ता है", "मन", "भावनाएँ"] },
         { q: "क्या सही काम पता होने पर भी आप अक्सर आसान या आराम वाला रास्ता चुन लेते हैं?", bondage: "सुविधा / आलस", books: ["संघर्ष", "ज्वाला", "उत्कृष्टता"] },
-        { q: "क्या असफलता का डर आपको किसी ज़रूरी कोशिश को शुरू करने या पूरा करने से रोक देता है?", bondage: "असफलता का डर", books: ["डर", "संघर्ष", "Decoding Success"] },
+        { q: "क्या असफलता का डर आपको किसी ज़रूरी कोशिश को शुरू करने চৈতন্য या पूरा करने से रोक देता है?", bondage: "असफलता का डर", books: ["डर", "संघर्ष", "Decoding Success"] },
         { q: "क्या किसी व्यक्ति, चीज़ या आदत के बारे में आपको लगता है- 'इसके बिना मैं नहीं रह सकता'?", bondage: "निर्भरता", books: ["मन", "आज़ादी 2.0", "वेदान्त"] }
     ];
 
@@ -246,10 +245,9 @@
         } else {
             booksArray.forEach(bookTitle => {
                 const bookInfo = bookDatabase[bookTitle];
-                // Added the onclick event to trigger the popup
                 galleryHTML += `
                     <div class="book-item" onclick="openModal('${bookTitle}')">
-                        <img src="${bookInfo.img}" alt="${bookTitle}" onerror="this.src='https://via.placeholder.com/120x180?text=Cover+Missing'">
+                        <img src="${bookInfo.img}" alt="${bookTitle}" onerror="this.src='[https://via.placeholder.com/120x180?text=Cover+Missing](https://via.placeholder.com/120x180?text=Cover+Missing)'">
                         <p>${bookTitle}</p>
                     </div>
                 `;
@@ -259,22 +257,21 @@
         document.getElementById('books-display').innerHTML = galleryHTML;
     }
 
-    // --- NEW POPUP CONTROL FUNCTIONS ---
+    // --- POPUP CONTROL FUNCTIONS ---
     function openModal(bookTitle) {
         const bookInfo = bookDatabase[bookTitle];
         
-        // Inject the correct data into the popup
         document.getElementById('modal-title').innerText = bookTitle;
         document.getElementById('modal-img').src = bookInfo.img;
-        document.getElementById('modal-desc').innerText = bookInfo.desc;
-        document.getElementById('modal-link').href = bookInfo.link;
         
-        // Make the popup visible
+        // Using innerHTML so <br><br> line breaks are rendered properly if added later
+        document.getElementById('modal-desc').innerHTML = bookInfo.desc;
+        
+        document.getElementById('modal-link').href = bookInfo.link;
         document.getElementById('book-modal').classList.remove('hidden');
     }
 
     function closeModal() {
-        // Hide the popup
         document.getElementById('book-modal').classList.add('hidden');
     }
 </script>
